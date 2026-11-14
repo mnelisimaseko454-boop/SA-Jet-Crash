@@ -21,8 +21,7 @@ canvas{width:100%;height:100%;display:block}
 .status{position:absolute;top:12px;left:12px;font-size:12px;background:rgba(0,0,0,.5);padding:5px 10px;border-radius:20px;z-index:2}
 .controls{display:flex;gap:8px;margin:10px 12px}
 .controls button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-size:14px}
-.pause-btn{background:#f59e0b;color:#000}
-.stop-btn{background:#333;color:#fff}
+.pause-btn{background:#f59e0b;color:#000}.stop-btn{background:#333;color:#fff}
 .bet-panel{background:#12151d;margin:10px 12px;border-radius:16px;padding:14px;border:1px solid #1f2430}
 .bet-tabs{display:flex;background:#0b0e14;border-radius:20px;padding:3px;margin-bottom:12px}
 .bet-tabs button{flex:1;padding:7px;border:none;background:transparent;color:#8b93a5;border-radius:20px;font-weight:700}
@@ -39,7 +38,22 @@ canvas{width:100%;height:100%;display:block}
 .bet-btn:disabled{background:#333;color:#888;box-shadow:none;animation:none}
 @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
 .bet-info{font-size:12px;color:#8b93a5;margin-top:8px;text-align:center}
+.auto-box{background:#0b0e14;border:1px solid #2a303d;border-radius:14px;padding:12px;margin-top:12px}
+.auto-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.auto-row:last-child{margin-bottom:0}
+.auto-row label{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;cursor:pointer}
+.auto-row input[type=checkbox]{width:20px;height:20px;accent-color:#22c55e}
+.auto-row input[type=number]{width:70px;background:#1a1e28;border:1px solid #333;color:#fff;padding:8px;border-radius:10px;text-align:center;font-weight:800}
+.auto-status{font-size:11px;color:#8b93a5;text-align:center;margin-top:8px}
 .free-btn{margin:12px;display:block;width:calc(100% - 24px);background:linear-gradient(90deg,#f59e0b,#f97316);border:none;color:#fff;padding:14px;border-radius:14px;font-weight:900;font-size:15px}
+.free-btn:disabled{background:#333;opacity:.6}
+.claim-timer{text-align:center;font-size:12px;color:#8b93a5;margin-top:-6px;margin-bottom:6px}
+.shop-btn{margin:0 12px 10px;display:block;width:calc(100% - 24px);background:#1e2a1e;border:1px solid #2a4a2a;color:#4ade80;padding:13px;border-radius:14px;font-weight:900;font-size:14px;cursor:pointer}
+.shop-grid{display:none;margin:0 12px 10px;background:#12151d;border-radius:16px;padding:12px}
+.shop-grid.open{display:block}
+.shop-item{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #1a1e28}
+.shop-item:last-child{border:none}
+.shop-item button{background:#22c55e;color:#fff;border:none;padding:8px 14px;border-radius:10px;font-weight:800;cursor:pointer}
 .list{margin:10px 12px;background:#12151d;border-radius:16px;padding:12px}
 .list-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1e28;font-size:13px}
 .win{color:#4ade80;font-weight:800}.lose{color:#f87171}
@@ -53,7 +67,6 @@ canvas{width:100%;height:100%;display:block}
 <div class="history" id="history"></div>
 <div class="game" id="gameArea"><canvas id="canvas"></canvas><div class="status" id="status">🛫 WAITING</div><div class="mult" id="mult">1.00x</div></div>
 
-<!-- NEW: PAUSE + STOP CONTROLS -->
 <div class="controls">
   <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸️ PAUSE GAME</button>
   <button class="stop-btn" onclick="stopGame()">🔕 STOP / CLOSE</button>
@@ -66,10 +79,35 @@ canvas{width:100%;height:100%;display:block}
     <button class="bet-btn" id="betBtn" onclick="placeBet()">Bet<br><small id="betLabel">100 coins</small></button>
   </div>
   <div class="quick"><button onclick="setBet(10,this)">10</button><button onclick="setBet(50,this)">50</button><button onclick="setBet(100,this)" class="active">100</button><button onclick="setBet(500,this)">500</button></div>
+
+  <!-- MERGED: AUTO BET + AUTO CASHOUT -->
+  <div class="auto-box">
+    <div class="auto-row">
+      <label><input type="checkbox" id="autoBetToggle" onchange="toggleAuto()"> 🤖 Auto Bet</label>
+      <span style="font-size:11px;color:#8b93a5">Bets every round</span>
+    </div>
+    <div class="auto-row">
+      <label><input type="checkbox" id="autoCashToggle" onchange="toggleAuto()"> 🤖 Auto Cashout</label>
+      <div style="display:flex;align-items:center;gap:6px"><span style="font-size:12px;color:#8b93a5">at</span><input id="autoCashAt" value="2.00" type="number" step="0.10" min="1.10" max="100" onchange="toggleAuto()"><span style="font-weight:800">x</span></div>
+    </div>
+    <div class="auto-row">
+      <label>🔁 Rounds:</label>
+      <div style="display:flex;align-items:center;gap:6px"><input id="autoRounds" value="0" type="number" min="0" max="100" onchange="toggleAuto()" style="width:60px"><span style="font-size:11px;color:#8b93a5">0 = ∞</span></div>
+    </div>
+    <div class="auto-status" id="autoStatus">Auto OFF — Play manually</div>
+  </div>
+
   <div class="bet-info" id="betInfo">Bet coins, tap 🛑 CASH OUT to stop jet & take win.</div>
 </div>
 
-<button class="free-btn" onclick="claimDaily()">🎁 CLAIM FREE 1,000 COINS</button>
+<!-- DAILY CLAIM - ONCE A DAY -->
+<button class="free-btn" id="claimBtn" onclick="claimDaily()">🎁 CLAIM FREE 1,000 COINS</button>
+<div class="claim-timer" id="claimTimer"></div>
+
+<!-- SHOP - 10 PACKS -->
+<button class="shop-btn" onclick="toggleShop()">🪙 BUY COINS — From 10 ⭐ ⬇️</button>
+<div class="shop-grid" id="shopGrid"></div>
+
 <div class="list" id="betsList"></div>
 <div class="disclaimer">Play money only. Coins have NO cash value, cannot be withdrawn. 18+ For fun only.</div>
 <div style="height:20px"></div>
@@ -78,9 +116,21 @@ canvas{width:100%;height:100%;display:block}
 <script>
 let tg = window.Telegram?.WebApp;
 if(tg){ tg.ready(); tg.expand(); tg.setHeaderColor('#0b0e14'); tg.setBackgroundColor('#0b0e14'); }
+
+const COIN_PACKS = [
+  { stars:10, coins:500 }, { stars:20, coins:1200 }, { stars:30, coins:2000 }, { stars:50, coins:5000 }, { stars:80, coins:9000 },
+  { stars:100, coins:12000 }, { stars:150, coins:20000 }, { stars:250, coins:35000 }, { stars:500, coins:75000 }, { stars:1000, coins:160000 },
+];
+const CLAIM_COOLDOWN = 24*60*60*1000;
 let balance = parseInt(localStorage.getItem('jet_balance')||'1000');
 let history = JSON.parse(localStorage.getItem('jet_history')||'[1.00,8.23,1.44,8.21,1.30,1.14,4.35]');
 let myBets = JSON.parse(localStorage.getItem('jet_myBets')||'[]');
+let lastClaim = parseInt(localStorage.getItem('jet_lastClaim')||'0');
+let autoBetEnabled = localStorage.getItem('jet_autoBet')==='true';
+let autoCashEnabled = localStorage.getItem('jet_autoCash')==='true';
+let autoCashAt = parseFloat(localStorage.getItem('jet_autoCashAt')||'2.00');
+let autoRoundsTotal = parseInt(localStorage.getItem('jet_autoRounds')||'0');
+let autoRoundsLeft = 0;
 let game = { phase:'waiting', mult:1.00, crash:0, bet:0, cashed:false, timer:null, paused:false, countdown:5 };
 let allBets = [];
 const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
@@ -89,6 +139,7 @@ const balanceEl=document.getElementById('balance'), historyEl=document.getElemen
 const betBtn=document.getElementById('betBtn'), betAmountEl=document.getElementById('betAmount');
 const betLabel=document.getElementById('betLabel'), betInfo=document.getElementById('betInfo');
 const pauseBtn=document.getElementById('pauseBtn');
+
 function save(){ localStorage.setItem('jet_balance',balance); localStorage.setItem('jet_history',JSON.stringify(history)); localStorage.setItem('jet_myBets',JSON.stringify(myBets)); }
 function fmt(n){ return Math.floor(n).toLocaleString('en-ZA'); }
 function updateUI(){
@@ -104,29 +155,120 @@ function setBet(v,btn){ betAmountEl.value=v; document.querySelectorAll('.quick b
 betAmountEl.addEventListener('input',updateUI);
 function getCrash(){ const r=Math.random(); return Math.min(Math.max(0.97/(1-r),1),100); }
 
-// === NEW: PAUSE / STOP ===
-function togglePause(){
-  game.paused=!game.paused;
-  if(game.paused){
-    if(game.timer) clearInterval(game.timer);
-    pauseBtn.textContent='▶️ RESUME GAME'; pauseBtn.style.background='#22c55e';
-    statusEl.textContent='⏸️ PAUSED - Tap RESUME';
-    betInfo.textContent='⏸️ Game paused. Tap RESUME to continue.';
-    if(tg) tg.HapticFeedback?.notificationOccurred('warning');
+// === MERGED AUTO BET + AUTO CASHOUT ===
+function toggleAuto(){
+  autoBetEnabled = document.getElementById('autoBetToggle').checked;
+  autoCashEnabled = document.getElementById('autoCashToggle').checked;
+  autoCashAt = parseFloat(document.getElementById('autoCashAt').value||'2.00');
+  if(autoCashAt<1.10) autoCashAt=1.10; if(autoCashAt>100) autoCashAt=100;
+  document.getElementById('autoCashAt').value = autoCashAt.toFixed(2);
+  autoRoundsTotal = parseInt(document.getElementById('autoRounds').value||'0');
+  localStorage.setItem('jet_autoBet', autoBetEnabled);
+  localStorage.setItem('jet_autoCash', autoCashEnabled);
+  localStorage.setItem('jet_autoCashAt', autoCashAt);
+  localStorage.setItem('jet_autoRounds', autoRoundsTotal);
+  if(autoBetEnabled && autoRoundsLeft===0) autoRoundsLeft = autoRoundsTotal===0 ? 999999 : autoRoundsTotal;
+  if(!autoBetEnabled) autoRoundsLeft = 0;
+  updateAutoUI();
+}
+function updateAutoUI(){
+  document.getElementById('autoBetToggle').checked = autoBetEnabled;
+  document.getElementById('autoCashToggle').checked = autoCashEnabled;
+  document.getElementById('autoCashAt').value = autoCashAt.toFixed(2);
+  document.getElementById('autoRounds').value = autoRoundsTotal;
+  const st = document.getElementById('autoStatus');
+  if(autoBetEnabled && autoCashEnabled) st.innerHTML = `🤖 <b style="color:#4ade80">AUTO ON</b> — Auto Bet ${betAmountEl.value} + Auto Cashout at ${autoCashAt.toFixed(2)}x ${autoRoundsTotal>0 ? `(${autoRoundsLeft} rounds left)` : '(∞ rounds)'}`;
+  else if(autoBetEnabled) st.innerHTML = `🤖 Auto Bet ON — You cash out manually`;
+  else if(autoCashEnabled) st.innerHTML = `🤖 Auto Cashout ON at ${autoCashAt.toFixed(2)}x — You bet manually`;
+  else st.innerHTML = `Auto OFF — Play manually`;
+}
+function doAutoBet(){
+  if(!autoBetEnabled) return;
+  if(game.phase!=='betting') return;
+  if(game.bet>0) return;
+  if(autoRoundsTotal>0 && autoRoundsLeft<=0){ autoBetEnabled=false; document.getElementById('autoBetToggle').checked=false; updateAutoUI(); betInfo.textContent='🤖 Auto Bet finished — rounds done.'; return; }
+  const amt = parseInt(betAmountEl.value||100);
+  if(balance<amt){ betInfo.textContent='❌ Auto Bet stopped — Not enough coins!'; autoBetEnabled=false; document.getElementById('autoBetToggle').checked=false; updateAutoUI(); return; }
+  balance-=amt; game.bet=amt; game.cashed=false;
+  betInfo.innerHTML=`🤖 Auto Bet <b>${fmt(amt)}</b> placed! ${autoCashEnabled ? `Will auto-cash at ${autoCashAt.toFixed(2)}x` : ''}`;
+  betBtn.innerHTML = autoCashEnabled ? `🤖 AUTO — Will cash at ${autoCashAt.toFixed(2)}x<br><small>Bet ${fmt(amt)}</small>` : `🛑 CASH OUT<br><small id="cashLabel">1.00x</small>`;
+  betBtn.classList.add('cashout'); betBtn.disabled = autoCashEnabled ? true : false;
+  save(); updateUI();
+}
+function doAutoCashout(){
+  if(!autoCashEnabled || game.bet<=0 || game.cashed) return false;
+  if(game.mult < autoCashAt) return false;
+  const win = Math.floor(game.bet * game.mult);
+  balance+=win; game.cashed=true;
+  myBets.push({bet:game.bet, at:game.mult.toFixed(2), win:win});
+  allBets.push({name:'You (Auto)', bet:game.bet, at:game.mult.toFixed(2), win:win});
+  betInfo.innerHTML=`🤖 <b>AUTO CASHED OUT at ${game.mult.toFixed(2)}x</b> — Won <b style="color:#4ade80">+${fmt(win)}</b>`;
+  betBtn.innerHTML='Bet<br><small>Next round</small>'; betBtn.classList.remove('cashout'); betBtn.disabled=true;
+  if(tg) tg.HapticFeedback?.notificationOccurred('success');
+  save(); updateUI();
+  if(autoRoundsTotal>0) autoRoundsLeft--;
+  updateAutoUI();
+  return true;
+}
+
+// === DAILY CLAIM - ONCE A DAY ===
+function updateClaimUI(){
+  const btn=document.getElementById('claimBtn'); const timerEl=document.getElementById('claimTimer');
+  if(!btn||!timerEl) return;
+  const now=Date.now(); const remaining=CLAIM_COOLDOWN-(now-lastClaim);
+  if(lastClaim!==0 && remaining>0){
+    const h=Math.floor(remaining/3600000); const m=Math.floor((remaining%3600000)/60000); const s=Math.floor((remaining%60000)/1000);
+    btn.disabled=true; btn.style.opacity='0.5'; btn.style.background='#333';
+    btn.textContent=`⏳ Next free coins in ${h}h ${m}m ${s}s`;
+    timerEl.textContent=`You already claimed today. Come back tomorrow for +1,000 coins.`;
   } else {
-    pauseBtn.textContent='⏸️ PAUSE GAME'; pauseBtn.style.background='#f59e0b';
-    statusEl.textContent='▶️ RESUMED';
-    betInfo.textContent='Game resumed!';
-    if(game.phase==='flying') startFlyingLoop();
-    else if(game.phase==='waiting' || game.phase==='crashed') startBetting();
+    btn.disabled=false; btn.style.opacity='1'; btn.style.background='linear-gradient(90deg,#f59e0b,#f97316)';
+    btn.textContent=`🎁 CLAIM FREE 1,000 COINS`; timerEl.textContent= lastClaim===0 ? `First claim is free!` : `Ready to claim! +1,000 coins`;
   }
 }
+function claimDaily(){
+  const now=Date.now(); const remaining=CLAIM_COOLDOWN-(now-lastClaim);
+  if(lastClaim!==0 && remaining>0){
+    const h=Math.floor(remaining/3600000); const m=Math.floor((remaining%3600000)/60000);
+    betInfo.innerHTML=`⏳ Already claimed today! Come back in <b>${h}h ${m}m</b>`;
+    if(tg) tg.HapticFeedback?.notificationOccurred('warning');
+    updateClaimUI(); return;
+  }
+  lastClaim=now; localStorage.setItem('jet_lastClaim', lastClaim.toString());
+  balance+=1000; save(); updateUI(); updateClaimUI();
+  betInfo.innerHTML=`🎁 <b style="color:#4ade80">+1,000 FREE coins!</b> Balance: ${fmt(balance)}. Next claim in 24h.`;
+  if(tg) tg.HapticFeedback?.notificationOccurred('success');
+}
+setInterval(updateClaimUI,1000);
+
+// === SHOP - 10 PACKS ===
+function toggleShop(){
+  const grid=document.getElementById('shopGrid');
+  grid.classList.toggle('open');
+  if(grid.innerHTML===''){
+    grid.innerHTML = `<div style="font-weight:800;margin-bottom:8px">🪙 Buy Coins — Play money only, no cash value</div>` + COIN_PACKS.map((p,i)=>`<div class="shop-item"><span>🪙 <b>${fmt(p.coins)} coins</b> ${i===0?'⭐ Cheapest':''} ${i===9?'🔥 Best Value':''}</span><button onclick="buyPack(${p.stars},${p.coins})">${p.stars} ⭐ Buy</button></div>`).join('') + `<div style="font-size:11px;color:#666;margin-top:8px;text-align:center">Coins cannot be withdrawn. For fun only. 18+</div>`;
+  }
+}
+function buyPack(stars, coins){
+  // In Telegram, this will open Stars invoice via bot - for now show info, bot handles real payment
+  if(tg){
+    tg.sendData(JSON.stringify({ action:'buy_coins', stars:stars, coins:coins }));
+    betInfo.innerHTML=`🪙 Buying <b>${fmt(coins)} coins</b> for ${stars} ⭐... Check bot chat for payment.`;
+  } else {
+    // Demo in browser - just add coins for testing
+    balance+=coins; save(); updateUI();
+    betInfo.innerHTML=`🪙 <b>+${fmt(coins)} coins</b> added (Demo). In Telegram, Stars payment will open.`;
+  }
+}
+
+// === PAUSE / STOP ===
+function togglePause(){
+  game.paused=!game.paused;
+  if(game.paused){ if(game.timer) clearInterval(game.timer); pauseBtn.textContent='▶️ RESUME GAME'; pauseBtn.style.background='#22c55e'; statusEl.textContent='⏸️ PAUSED'; betInfo.textContent='⏸️ Game paused.'; }
+  else { pauseBtn.textContent='⏸️ PAUSE GAME'; pauseBtn.style.background='#f59e0b'; statusEl.textContent='▶️ RESUMED'; betInfo.textContent='Game resumed!'; if(game.phase==='flying') startFlyingLoop(); else if(game.phase==='waiting'||game.phase==='crashed') startBetting(); }
+}
 function stopGame(){
-  game.paused=true; if(game.timer) clearInterval(game.timer);
-  statusEl.textContent='🔕 STOPPED';
-  betInfo.textContent='🔕 Game stopped. Close app or tap RESUME.';
-  pauseBtn.textContent='▶️ RESUME GAME';
-  // Tell Telegram to close
+  game.paused=true; if(game.timer) clearInterval(game.timer); statusEl.textContent='🔕 STOPPED'; betInfo.textContent='🔕 Stopped.';
   if(confirm('Stop game and close Mini App?')){ if(tg) tg.close(); }
 }
 
@@ -134,8 +276,7 @@ function drawCurve(){
   const w=canvas.width=canvas.offsetWidth*2, h=canvas.height=canvas.offsetHeight*2;
   ctx.clearRect(0,0,w,h);
   if(game.phase==='waiting'||game.phase==='betting') return;
-  const progress=Math.min((game.mult-1)/9,1);
-  const endX=progress*w*0.92;
+  const progress=Math.min((game.mult-1)/9,1); const endX=progress*w*0.92;
   ctx.strokeStyle='#ff2a2a'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.shadowColor='#ff2a2a'; ctx.shadowBlur=15;
   ctx.beginPath(); ctx.moveTo(0,h);
   for(let x=0;x<=endX;x+=4){ const p=x/w; const y=h-Math.pow(p,1.7)*h*0.9-(p*h*0.05); ctx.lineTo(x,Math.max(y,20)); }
@@ -144,21 +285,17 @@ function drawCurve(){
   ctx.font='44px serif'; ctx.fillText('🛩️',Math.max(endX-20,0),Math.max(py+10,30));
 }
 function placeBet(){
-  if(game.paused){ betInfo.textContent='⏸️ Game is paused. Tap RESUME.'; return; }
-  // CASH OUT / STOP JET
+  if(game.paused){ betInfo.textContent='⏸️ Paused. Tap RESUME.'; return; }
   if(game.phase==='flying' && game.bet>0 && !game.cashed){
-    const win=Math.floor(game.bet*game.mult);
-    balance+=win; game.cashed=true;
-    myBets.push({bet:game.bet,at:game.mult.toFixed(2),win:win});
-    allBets.push({name:'You',bet:game.bet,at:game.mult.toFixed(2),win:win});
-    betInfo.innerHTML=`🛑 <b>CASHED OUT / STOPPED JET at ${game.mult.toFixed(2)}x</b> — Won <b style="color:#4ade80">+${fmt(win)}</b>`;
+    const win=Math.floor(game.bet*game.mult); balance+=win; game.cashed=true;
+    myBets.push({bet:game.bet,at:game.mult.toFixed(2),win:win}); allBets.push({name:'You',bet:game.bet,at:game.mult.toFixed(2),win:win});
+    betInfo.innerHTML=`🛑 <b>CASHED OUT at ${game.mult.toFixed(2)}x</b> — Won <b style="color:#4ade80">+${fmt(win)}</b>`;
     betBtn.innerHTML='Bet<br><small>Next round</small>'; betBtn.classList.remove('cashout'); betBtn.disabled=true;
-    if(tg) tg.HapticFeedback?.notificationOccurred('success');
-    save(); updateUI(); return;
+    if(tg) tg.HapticFeedback?.notificationOccurred('success'); save(); updateUI(); return;
   }
   if(game.phase!=='betting'){ betInfo.textContent='⏳ Wait for betting phase!'; return; }
   const amt=parseInt(betAmountEl.value||100);
-  if(balance<amt){ betInfo.textContent='❌ Not enough coins! Claim free coins.'; return; }
+  if(balance<amt){ betInfo.textContent='❌ Not enough coins! Claim free coins or buy.'; return; }
   if(game.bet>0){ betInfo.textContent='Already bet this round!'; return; }
   balance-=amt; game.bet=amt; game.cashed=false;
   betInfo.innerHTML=`✅ Bet <b>${fmt(amt)}</b> placed!`;
@@ -172,7 +309,10 @@ function startBetting(){
   betBtn.disabled=false; betBtn.classList.remove('cashout');
   betBtn.innerHTML=`Bet<br><small>${betAmountEl.value} coins</small>`;
   betInfo.textContent='Place your bet now!';
-  drawCurve(); setTimeout(()=>{ if(!game.paused) startFlying(); },8000);
+  drawCurve();
+  // AUTO BET - auto places bet at start of betting
+  setTimeout(()=>{ doAutoBet(); }, 500);
+  setTimeout(()=>{ if(!game.paused) startFlying(); },8000);
 }
 function startFlying(){
   game.phase='flying'; game.crash=getCrash();
@@ -188,6 +328,8 @@ function startFlyingLoop(){
     multEl.textContent=game.mult.toFixed(2)+'x'; multEl.className='mult';
     const cl=document.getElementById('cashLabel'); if(cl && game.bet>0 && !game.cashed) cl.textContent=game.mult.toFixed(2)+'x — Win '+fmt(Math.floor(game.bet*game.mult));
     drawCurve();
+    // AUTO CASHOUT check
+    doAutoCashout();
     if(game.mult>=game.crash){ clearInterval(game.timer); crash(); }
   },60);
 }
@@ -201,8 +343,8 @@ function crash(){
   save(); updateUI();
   game.countdown=5; let cd=setInterval(()=>{ game.countdown--; if(game.countdown<=0){ clearInterval(cd); if(!game.paused) startBetting(); } },1000);
 }
-function claimDaily(){ balance+=1000; save(); updateUI(); betInfo.innerHTML='🎁 <b style="color:#4ade80">+1,000 FREE coins!</b>'; }
-updateUI(); startBetting(); setInterval(drawCurve,100);
+
+updateAutoUI(); updateClaimUI(); updateUI(); startBetting(); setInterval(drawCurve,100);
 </script>
 </body>
   </html>
