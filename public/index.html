@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SA Jet Crash</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:#0b0e14;color:#fff;padding-bottom:90px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#12151d;border-bottom:1px solid #222}
+.logo{font-weight:900;font-size:18px}.logo b{color:#ff2a2a}
+.balance{background:#1e2a1e;border:1px solid #2a4a2a;padding:6px 12px;border-radius:20px;font-weight:800;font-size:14px;color:#4ade80}
+.history{display:flex;gap:8px;overflow-x:auto;padding:10px 12px;white-space:nowrap}
+.history span{font-size:12px;padding:4px 8px;border-radius:20px;background:#1a1e28;color:#8b93a5;font-weight:600}
+.history span.high{background:#1a2a1a;color:#4ade80}
+.game{position:relative;background:radial-gradient(ellipse at center,#1a2233 0%,#0b0e14 70%);margin:10px 12px;border-radius:16px;overflow:hidden;height:300px;border:1px solid #1f2430}
+canvas{width:100%;height:100%;display:block}
+.mult{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:64px;font-weight:900;z-index:2;text-shadow:0 4px 20px rgba(0,0,0,.8)}
+.mult.crashed{color:#ff2a2a;font-size:42px}
+.status{position:absolute;top:12px;left:12px;font-size:12px;background:rgba(0,0,0,.5);padding:5px 10px;border-radius:20px;z-index:2}
+.controls{display:flex;gap:8px;margin:10px 12px}
+.controls button{flex:1;padding:12px;border:none;border-radius:12px;font-weight:800;cursor:pointer;font-size:14px}
+.pause-btn{background:#f59e0b;color:#000}
+.stop-btn{background:#333;color:#fff}
+.bet-panel{background:#12151d;margin:10px 12px;border-radius:16px;padding:14px;border:1px solid #1f2430}
+.bet-tabs{display:flex;background:#0b0e14;border-radius:20px;padding:3px;margin-bottom:12px}
+.bet-tabs button{flex:1;padding:7px;border:none;background:transparent;color:#8b93a5;border-radius:20px;font-weight:700}
+.bet-tabs button.active{background:#232833;color:#fff}
+.bet-row{display:flex;gap:10px}
+.amount-box{display:flex;align-items:center;gap:8px;background:#0b0e14;border-radius:12px;padding:8px;flex:1}
+.amount-box button{width:28px;height:28px;border-radius:50%;border:1px solid #333;background:#1a1e28;color:#fff;font-size:18px}
+.amount-box input{flex:1;background:transparent;border:none;color:#fff;font-size:20px;font-weight:800;text-align:center;outline:none;width:60px}
+.quick{display:flex;gap:8px;margin-top:10px}
+.quick button{flex:1;background:#1a1e28;border:none;color:#8b93a5;padding:8px;border-radius:10px;font-weight:700}
+.quick button.active{background:#2a303d;color:#fff}
+.bet-btn{flex:1.2;background:#22c55e;color:#fff;border:none;border-radius:12px;padding:14px;font-size:18px;font-weight:900;box-shadow:0 4px 0 #15803d}
+.bet-btn.cashout{background:#f59e0b;box-shadow:0 4px 0 #b45309;animation:pulse .8s infinite;font-size:20px}
+.bet-btn:disabled{background:#333;color:#888;box-shadow:none;animation:none}
+@keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.02)}100%{transform:scale(1)}}
+.bet-info{font-size:12px;color:#8b93a5;margin-top:8px;text-align:center}
+.free-btn{margin:12px;display:block;width:calc(100% - 24px);background:linear-gradient(90deg,#f59e0b,#f97316);border:none;color:#fff;padding:14px;border-radius:14px;font-weight:900;font-size:15px}
+.list{margin:10px 12px;background:#12151d;border-radius:16px;padding:12px}
+.list-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #1a1e28;font-size:13px}
+.win{color:#4ade80;font-weight:800}.lose{color:#f87171}
+.disclaimer{text-align:center;font-size:11px;color:#666;padding:8px 14px;line-height:1.4}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#12151d;display:flex;justify-content:space-around;padding:10px 0 14px;border-top:1px solid #222}
+.bottom-nav div{text-align:center;font-size:11px;color:#8b93a5}.bottom-nav div.active{color:#fff}.bottom-nav .icon{font-size:20px;display:block}
+</style>
+</head>
+<body>
+<div class="topbar"><div class="logo">SA JET <b>CRASH</b> ✈️</div><div class="balance">🪙 <span id="balance">1,000</span> coins</div></div>
+<div class="history" id="history"></div>
+<div class="game" id="gameArea"><canvas id="canvas"></canvas><div class="status" id="status">🛫 WAITING</div><div class="mult" id="mult">1.00x</div></div>
+
+<!-- NEW: PAUSE + STOP CONTROLS -->
+<div class="controls">
+  <button class="pause-btn" id="pauseBtn" onclick="togglePause()">⏸️ PAUSE GAME</button>
+  <button class="stop-btn" onclick="stopGame()">🔕 STOP / CLOSE</button>
+</div>
+
+<div class="bet-panel">
+  <div class="bet-tabs"><button class="active">Bet</button><button>Auto</button></div>
+  <div class="bet-row">
+    <div class="amount-box"><button onclick="changeBet(-10)">−</button><input id="betAmount" value="100" type="number"><button onclick="changeBet(10)">+</button></div>
+    <button class="bet-btn" id="betBtn" onclick="placeBet()">Bet<br><small id="betLabel">100 coins</small></button>
+  </div>
+  <div class="quick"><button onclick="setBet(10,this)">10</button><button onclick="setBet(50,this)">50</button><button onclick="setBet(100,this)" class="active">100</button><button onclick="setBet(500,this)">500</button></div>
+  <div class="bet-info" id="betInfo">Bet coins, tap 🛑 CASH OUT to stop jet & take win.</div>
+</div>
+
+<button class="free-btn" onclick="claimDaily()">🎁 CLAIM FREE 1,000 COINS</button>
+<div class="list" id="betsList"></div>
+<div class="disclaimer">Play money only. Coins have NO cash value, cannot be withdrawn. 18+ For fun only.</div>
+<div style="height:20px"></div>
+<div class="bottom-nav"><div class="active"><span class="icon">☰</span>Menu</div><div><span class="icon">🪙</span>Deposit</div><div onclick="stopGame()"><span class="icon">⏻</span>Close</div></div>
+
+<script>
+let tg = window.Telegram?.WebApp;
+if(tg){ tg.ready(); tg.expand(); tg.setHeaderColor('#0b0e14'); tg.setBackgroundColor('#0b0e14'); }
+let balance = parseInt(localStorage.getItem('jet_balance')||'1000');
+let history = JSON.parse(localStorage.getItem('jet_history')||'[1.00,8.23,1.44,8.21,1.30,1.14,4.35]');
+let myBets = JSON.parse(localStorage.getItem('jet_myBets')||'[]');
+let game = { phase:'waiting', mult:1.00, crash:0, bet:0, cashed:false, timer:null, paused:false, countdown:5 };
+let allBets = [];
+const canvas=document.getElementById('canvas'), ctx=canvas.getContext('2d');
+const multEl=document.getElementById('mult'), statusEl=document.getElementById('status');
+const balanceEl=document.getElementById('balance'), historyEl=document.getElementById('history');
+const betBtn=document.getElementById('betBtn'), betAmountEl=document.getElementById('betAmount');
+const betLabel=document.getElementById('betLabel'), betInfo=document.getElementById('betInfo');
+const pauseBtn=document.getElementById('pauseBtn');
+function save(){ localStorage.setItem('jet_balance',balance); localStorage.setItem('jet_history',JSON.stringify(history)); localStorage.setItem('jet_myBets',JSON.stringify(myBets)); }
+function fmt(n){ return Math.floor(n).toLocaleString('en-ZA'); }
+function updateUI(){
+  balanceEl.textContent=fmt(balance);
+  historyEl.innerHTML=history.slice(-12).map(h=>`<span class="${h>=2?'high':''}">${h.toFixed(2)}x</span>`).join('');
+  betLabel.textContent=betAmountEl.value+' coins';
+  let list=document.getElementById('betsList');
+  let rows=allBets.slice(-6).reverse().map(b=>`<div class="list-row"><span>👤 ${b.name}</span><span>${b.bet} @ ${b.at}x</span><span class="${b.win>0?'win':'lose'}">${b.win>0?'+'+fmt(b.win):'−'+fmt(b.bet)}</span></div>`).join('');
+  list.innerHTML=rows||'<div class="list-row"><span>No bets yet</span></div>';
+}
+function changeBet(d){ let v=parseInt(betAmountEl.value||100)+d; if(v<10)v=10; if(v>1000)v=1000; betAmountEl.value=v; updateUI(); }
+function setBet(v,btn){ betAmountEl.value=v; document.querySelectorAll('.quick button').forEach(b=>b.classList.remove('active')); if(btn)btn.classList.add('active'); updateUI(); }
+betAmountEl.addEventListener('input',updateUI);
+function getCrash(){ const r=Math.random(); return Math.min(Math.max(0.97/(1-r),1),100); }
+
+// === NEW: PAUSE / STOP ===
+function togglePause(){
+  game.paused=!game.paused;
+  if(game.paused){
+    if(game.timer) clearInterval(game.timer);
+    pauseBtn.textContent='▶️ RESUME GAME'; pauseBtn.style.background='#22c55e';
+    statusEl.textContent='⏸️ PAUSED - Tap RESUME';
+    betInfo.textContent='⏸️ Game paused. Tap RESUME to continue.';
+    if(tg) tg.HapticFeedback?.notificationOccurred('warning');
+  } else {
+    pauseBtn.textContent='⏸️ PAUSE GAME'; pauseBtn.style.background='#f59e0b';
+    statusEl.textContent='▶️ RESUMED';
+    betInfo.textContent='Game resumed!';
+    if(game.phase==='flying') startFlyingLoop();
+    else if(game.phase==='waiting' || game.phase==='crashed') startBetting();
+  }
+}
+function stopGame(){
+  game.paused=true; if(game.timer) clearInterval(game.timer);
+  statusEl.textContent='🔕 STOPPED';
+  betInfo.textContent='🔕 Game stopped. Close app or tap RESUME.';
+  pauseBtn.textContent='▶️ RESUME GAME';
+  // Tell Telegram to close
+  if(confirm('Stop game and close Mini App?')){ if(tg) tg.close(); }
+}
+
+function drawCurve(){
+  const w=canvas.width=canvas.offsetWidth*2, h=canvas.height=canvas.offsetHeight*2;
+  ctx.clearRect(0,0,w,h);
+  if(game.phase==='waiting'||game.phase==='betting') return;
+  const progress=Math.min((game.mult-1)/9,1);
+  const endX=progress*w*0.92;
+  ctx.strokeStyle='#ff2a2a'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.shadowColor='#ff2a2a'; ctx.shadowBlur=15;
+  ctx.beginPath(); ctx.moveTo(0,h);
+  for(let x=0;x<=endX;x+=4){ const p=x/w; const y=h-Math.pow(p,1.7)*h*0.9-(p*h*0.05); ctx.lineTo(x,Math.max(y,20)); }
+  ctx.stroke(); ctx.lineTo(endX,h); ctx.lineTo(0,h); ctx.closePath(); ctx.fillStyle='rgba(255,42,42,0.12)'; ctx.fill();
+  const p=endX/w; const py=h-Math.pow(p,1.7)*h*0.9-(p*h*0.05);
+  ctx.font='44px serif'; ctx.fillText('🛩️',Math.max(endX-20,0),Math.max(py+10,30));
+}
+function placeBet(){
+  if(game.paused){ betInfo.textContent='⏸️ Game is paused. Tap RESUME.'; return; }
+  // CASH OUT / STOP JET
+  if(game.phase==='flying' && game.bet>0 && !game.cashed){
+    const win=Math.floor(game.bet*game.mult);
+    balance+=win; game.cashed=true;
+    myBets.push({bet:game.bet,at:game.mult.toFixed(2),win:win});
+    allBets.push({name:'You',bet:game.bet,at:game.mult.toFixed(2),win:win});
+    betInfo.innerHTML=`🛑 <b>CASHED OUT / STOPPED JET at ${game.mult.toFixed(2)}x</b> — Won <b style="color:#4ade80">+${fmt(win)}</b>`;
+    betBtn.innerHTML='Bet<br><small>Next round</small>'; betBtn.classList.remove('cashout'); betBtn.disabled=true;
+    if(tg) tg.HapticFeedback?.notificationOccurred('success');
+    save(); updateUI(); return;
+  }
+  if(game.phase!=='betting'){ betInfo.textContent='⏳ Wait for betting phase!'; return; }
+  const amt=parseInt(betAmountEl.value||100);
+  if(balance<amt){ betInfo.textContent='❌ Not enough coins! Claim free coins.'; return; }
+  if(game.bet>0){ betInfo.textContent='Already bet this round!'; return; }
+  balance-=amt; game.bet=amt; game.cashed=false;
+  betInfo.innerHTML=`✅ Bet <b>${fmt(amt)}</b> placed!`;
+  betBtn.innerHTML=`🛑 CASH OUT<br><small id="cashLabel">1.00x</small>`; betBtn.classList.add('cashout');
+  save(); updateUI();
+}
+function startBetting(){
+  if(game.paused) return;
+  game.phase='betting'; game.mult=1.00; game.bet=0; game.cashed=false;
+  statusEl.textContent='🛫 BETTING OPEN - 8 SECONDS'; multEl.style.display='none';
+  betBtn.disabled=false; betBtn.classList.remove('cashout');
+  betBtn.innerHTML=`Bet<br><small>${betAmountEl.value} coins</small>`;
+  betInfo.textContent='Place your bet now!';
+  drawCurve(); setTimeout(()=>{ if(!game.paused) startFlying(); },8000);
+}
+function startFlying(){
+  game.phase='flying'; game.crash=getCrash();
+  statusEl.textContent='✈️ FLYING... TAP 🛑 CASH OUT!'; multEl.style.display='block';
+  allBets=[]; for(let i=0;i<3;i++){ allBets.push({name:['Thabo','Naledi','Sipho'][i],bet:[10,50,100][i],at:'-',win:0}); }
+  startFlyingLoop();
+}
+function startFlyingLoop(){
+  if(game.timer) clearInterval(game.timer);
+  game.timer=setInterval(()=>{
+    if(game.paused){ clearInterval(game.timer); return; }
+    game.mult+=0.05+(game.mult*0.012); game.mult=Math.floor(game.mult*100)/100;
+    multEl.textContent=game.mult.toFixed(2)+'x'; multEl.className='mult';
+    const cl=document.getElementById('cashLabel'); if(cl && game.bet>0 && !game.cashed) cl.textContent=game.mult.toFixed(2)+'x — Win '+fmt(Math.floor(game.bet*game.mult));
+    drawCurve();
+    if(game.mult>=game.crash){ clearInterval(game.timer); crash(); }
+  },60);
+}
+function crash(){
+  game.phase='crashed'; history.push(Math.floor(game.crash*100)/100); if(history.length>30) history.shift();
+  multEl.textContent='💥 '+game.crash.toFixed(2)+'x'; multEl.className='mult crashed';
+  statusEl.textContent='💥 CRASHED at '+game.crash.toFixed(2)+'x';
+  if(game.bet>0 && !game.cashed){ myBets.push({bet:game.bet,at:game.crash.toFixed(2),win:0}); allBets.push({name:'You',bet:game.bet,at:game.crash.toFixed(2),win:0}); betInfo.innerHTML=`💥 Crashed at ${game.crash.toFixed(2)}x — Lost ${fmt(game.bet)}`; if(tg) tg.HapticFeedback?.notificationOccurred('error'); }
+  betBtn.disabled=true; betBtn.classList.remove('cashout'); betBtn.innerHTML='Crashed...';
+  document.getElementById('gameArea').style.background='#3a0a0a'; setTimeout(()=>{ document.getElementById('gameArea').style.background=''; },600);
+  save(); updateUI();
+  game.countdown=5; let cd=setInterval(()=>{ game.countdown--; if(game.countdown<=0){ clearInterval(cd); if(!game.paused) startBetting(); } },1000);
+}
+function claimDaily(){ balance+=1000; save(); updateUI(); betInfo.innerHTML='🎁 <b style="color:#4ade80">+1,000 FREE coins!</b>'; }
+updateUI(); startBetting(); setInterval(drawCurve,100);
+</script>
+</body>
+  </html>
